@@ -134,12 +134,10 @@ dobackup() {
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
-    chmod +r "${borgdir}" -R
   fi
   if [[ -n $rsyncdir ]]; then
     echo "Doing remote backup of ${1}@${2}"
     borg create $BORG_OPTS --remote-path=${BORGPATH} "${rsyncdir}::${2}" "$bind_dir"
-    chmod +r "${borgdir}" -R
   fi
   umount "$bind_dir"
 }
