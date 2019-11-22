@@ -21,6 +21,7 @@ costs and fees for deleting data.
 
 Borgsnap automatically purges snapshots and old borg backups (both locally
 and remotely) based on retention settings given in the configuration.
+There is also the possibility to backup an already existing snapshot.
 
 This assumes borg version 1.0 or later.
 
@@ -49,6 +50,17 @@ That's it!
 If things fail, it is not currently re-entrant. For example, if a ZFS snapshot
 already exists for the day, the script will fail. This could use a bit of
 battle hardening, but has been working well for me for several months already.
+
+```
+usage: borgsnap <command> <config_file> [<args>]
+
+commands:
+    run             Run backup lifecycle.
+                    usage: borgsnap run <config_file>
+
+    snap            Run backup for specific snapshot.
+                    usage: borgsnap snap <config_file> <snapshot-name>
+```
 
 ## Restoring files
 

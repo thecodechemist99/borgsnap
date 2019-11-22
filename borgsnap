@@ -13,7 +13,7 @@
 # Keep up to MONTH_KEEP month backups, WEEK_KEEP week backups, and
 # DAY_KEEP day backups.
 #
-# Usage: borgsnap <config_file>
+# Usage: borgsnap <command> <config_file> [<args>]
 #
 # Configuration file documentation:
 #
@@ -64,16 +64,14 @@ export BORGPATH="borg1" # "borg1" for rsync, otherwise "borg" as appropriate
 usage() {
   cat << EOF
 
-usage: $(basename "$0") <command> [<args>]
+usage: $(basename "$0") <command> <config_file> [<args>]
 
 commands:
-    config          Run backup with specific config file.
-                    Requires single argument of config file.
-                      config sample.conf
+    run             Run backup lifecycle.
+                    usage: $(basename "$0") run <config_file>
 
-    snap            Run backup for specific snapshot
-                    Requires two arguments of  config file & snapshot name.
-                      snap sample.conf setup-done
+    snap            Run backup for specific snapshot.
+                    usage: $(basename "$0") snap <config_file> <snapshot-name>
 
 EOF
   exit 1
@@ -296,7 +294,7 @@ if [ $# -eq 0 ];then
 fi
 
 case "$1" in
-  config) runBackup "${@:2}";;
+  run) runBackup "${@:2}";;
   snap) backupSnapshot "${@:2}";;
   *) echo "$1 is an unknown command!" && usage;;
 esac
