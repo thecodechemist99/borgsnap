@@ -62,7 +62,20 @@ export BINDDIR="/run/borgsnap"
 export BORGPATH="borg1" # "borg1" for rsync, otherwise "borg" as appropriate
 
 usage() {
-  echo "Usage: $0 <config_file>" >&2
+  cat << EOF
+
+usage: $(basename "$0") <command> [<args>]
+
+commands:
+    config          Run backup with specific config file.
+                    Requires single argument of config file.
+                      config sample.conf
+
+    snap            Run backup for specific snapshot
+                    Requires two arguments of  config file & snapshot name.
+                      snap sample.conf setup-done
+
+EOF
   exit 1
 }
 
@@ -71,14 +84,7 @@ die() {
   exit 1
 }
 
-[[ $# == 1 ]] || usage
-
-[[ -r $1 ]] || die "Unable to open $1"
-
-source "$1"
-
-BORG_PASSPHRASE=$(< "$PASS")
-export BORG_PASSPHRASE
+[[ $(id -u) == 0 ]] || die "Must be run as root"
 
 dow=$(date +"%w")
 dom=$(date +"%d")
@@ -86,6 +92,21 @@ date=$(date +"%Y%m%d")
 
 forcemonth=0
 forceweek=0
+
+readconfigfile() {
+  [[ $# == 1 ]] || usage
+  [[ -r $1 ]] || die "Unable to open $1"
+
+  source "$1"
+
+  BORG_PASSPHRASE=$(< "$PASS")
+  export BORG_PASSPHRASE
+
+  [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
+  if [[ -n $OUT ]]; then
+    [[ -d $OUT ]] || die "Non-existent output directory $OUT"
+  fi
+}
 
 findlast() {
   zfs list -t snap -o name | grep "${1}@${2}-" | sort -nr | head -1
@@ -107,20 +128,20 @@ dobackup() {
   # $2 - label, i.e. month-20170602
   # Expects borgdir, rsyncdir, BINDDIR
 
-  mount=$(zfs get -H -o value mountpoint "$1")
-
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
   mkdir -p "$bind_dir"
-  mount --bind "${mount}/.zfs/snapshot/${2}" "$bind_dir"
+  mount -t zfs "${1}@${2}" "$bind_dir"
   BORG_OPTS="--info --stats --compression lz4 --exclude-if-present .noborg"
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
+    chmod +r "${borgdir}" -R
   fi
   if [[ -n $rsyncdir ]]; then
     echo "Doing remote backup of ${1}@${2}"
     borg create $BORG_OPTS --remote-path=${BORGPATH} "${rsyncdir}::${2}" "$bind_dir"
+    chmod +r "${borgdir}" -R
   fi
   umount "$bind_dir"
 }
@@ -155,75 +176,128 @@ purgeold() {
   fi
 }
 
-[[ $(id -u) == 0 ]] || die "Must be run as root"
-[[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
-if [[ -n $OUT ]]; then
-  [[ -d $OUT ]] || die "Non-existent output directory $OUT"
+runBackup() {
+  readconfigfile $1
+
+  echo "====== $(date) ======"
+  for i in $FS; do
+    dataset=${i}
+    if [[ -n $OUT ]]; then
+      borgdir="$OUT/$dataset"
+    else
+      borgdir=""
+    fi
+    if [[ -n $REMOTE ]]; then
+      rsyncdir="$REMOTE/$dataset"
+    else
+      rsyncdir=""
+    fi
+
+    echo "Processing $dataset"
+
+    if [[ -n $borgdir && ! -d $borgdir ]]; then
+      echo "Initializing borg $borgdir"
+      mkdir -p "$borgdir"
+      borg init --encryption=repokey "$borgdir"
+    fi
+    if [[ -n $rsyncdir ]]; then
+      host=${REMOTE%:*}
+      dir=${REMOTE#*:}
+      set +e
+      ssh "$host" test -d "$dir/$dataset"
+      if [[ $? == 1 ]]; then
+        set -e
+        echo "Initializing remote $rsyncdir"
+        ssh "$host" mkdir -p "$dir/$dataset"
+        borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
+      fi
+      set -e
+    fi
+
+    lastmonth=$(findlast "$i" month)
+    if [[ -z $lastmonth ]]; then
+      forcemonth=1
+    fi
+
+    lastweek=$(findlast "$i" week)
+    if [[ -z $lastweek ]]; then
+      forceweek=1
+    fi
+
+    if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
+      label="month-$date"
+      snapshot "$i" "$label"
+      dobackup "$i" "$label"
+      purgeold "$i" month "$MONTH_KEEP"
+    elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
+      label="week-$date"
+      snapshot "$i" "$label"
+      dobackup "$i" "$label"
+      purgeold "$i" week "$WEEK_KEEP"
+    else
+      label="day-$date"
+      snapshot "$i" "$label"
+      dobackup "$i" "$label"
+      purgeold "$i" day "$DAY_KEEP"
+    fi
+  done
+  echo "====== $(date) ======"
+
+  echo "Backup Done $(date)"
+}
+
+backupSnapshot() {
+  readconfigfile $1
+
+  for i in $FS; do
+    dataset=${i}
+    if [[ -n $OUT ]]; then
+      borgdir="$OUT/$dataset"
+    else
+      borgdir=""
+    fi
+    if [[ -n $REMOTE ]]; then
+      rsyncdir="$REMOTE/$dataset"
+    else
+      rsyncdir=""
+    fi
+
+    echo "Processing $dataset"
+
+    if [[ -n $borgdir && ! -d $borgdir ]]; then
+      echo "Initializing borg $borgdir"
+      mkdir -p "$borgdir"
+      borg init --encryption=repokey "$borgdir"
+    fi
+    if [[ -n $rsyncdir ]]; then
+      host=${REMOTE%:*}
+      dir=${REMOTE#*:}
+      set +e
+      ssh "$host" test -d "$dir/$dataset"
+      if [[ $? == 1 ]]; then
+        set -e
+        echo "Initializing remote $rsyncdir"
+        ssh "$host" mkdir -p "$dir/$dataset"
+        borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
+      fi
+      set -e
+    fi
+
+    label="$2"
+    dobackup "$i" "$label"
+
+    echo "Backup Done $dataset@$2"
+  done
+}
+
+if [ $# -eq 0 ];then
+  usage
+  exit
 fi
 
-echo "====== $(date) ======"
-for i in $FS; do
-  pool=${i%%/*}
-  fs=${i##*/}
-  if [[ -n $OUT ]]; then
-    borgdir="$OUT/$pool/$fs"
-  else
-    borgdir=""
-  fi
-  if [[ -n $REMOTE ]]; then
-    rsyncdir="$REMOTE/$pool/$fs"
-  else
-    rsyncdir=""
-  fi
-
-  echo "Processing $pool $fs"
-
-  if [[ -n $borgdir && ! -d $borgdir ]]; then
-    echo "Initializing borg $borgdir"
-    mkdir -p "$borgdir"
-    borg init --encryption=repokey "$borgdir"
-  fi
-  if [[ -n $rsyncdir ]]; then
-    host=${REMOTE%:*}
-    dir=${REMOTE#*:}
-    set +e
-    ssh "$host" test -d "$dir/$pool/$fs"
-    if [[ $? == 1 ]]; then
-      set -e
-      echo "Initializing remote $rsyncdir"
-      ssh "$host" mkdir -p "$dir/$pool/$fs"
-      borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
-    fi
-    set -e
-  fi
-
-  lastmonth=$(findlast "$i" month)
-  if [[ -z $lastmonth ]]; then
-    forcemonth=1
-  fi
-
-  lastweek=$(findlast "$i" week)
-  if [[ -z $lastweek ]]; then
-    forceweek=1
-  fi
-
-  if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
-    label="month-$date"
-    snapshot "$i" "$label"
-    dobackup "$i" "$label"
-    purgeold "$i" month "$MONTH_KEEP"
-  elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
-    label="week-$date"
-    snapshot "$i" "$label"
-    dobackup "$i" "$label"
-    purgeold "$i" week "$WEEK_KEEP"
-  else
-    label="day-$date"
-    snapshot "$i" "$label"
-    dobackup "$i" "$label"
-    purgeold "$i" day "$DAY_KEEP"
-  fi
-done
-echo "====== $(date) ======"
-
-echo "Backup Done $(date)"
+case "$1" in
+  config) runBackup "${@:2}";;
+  snap) backupSnapshot "${@:2}";;
+  *) echo "$1 is an unknown command!" && usage;;
+esac
+exit
