@@ -30,7 +30,40 @@ are on a different physical drive than the data you are backing up and don't
 forget to do remote backups, because a local backup isn't disaster proofing
 your data.
 
-## Backup flow
+## borgsnap installation
+```
+git clone git@github.com:ManuelSchmitzberger/borgsnap.git
+```
+
+generate key:
+```
+pwgen 128 1 > /path/to/my/super/secret/myhost.key
+```
+
+adapt sample.conf
+```
+FS="zroot/root zroot/home zdata/data"
+OUT="/path/to/my/local/backup"
+REMOTE=""
+PASS="/path/to/my/super/secret/myhost.key"
+MONTH_KEEP=1
+WEEK_KEEP=4
+DAY_KEEP=7
+```
+
+how to:
+```
+usage: borgsnap <command> <config_file> [<args>]
+
+commands:
+    run             Run backup lifecycle.
+                    usage: borgsnap run <config_file>
+
+    snap            Run backup for specific snapshot.
+                    usage: borgsnap snap <config_file> <snapshot-name>
+```
+
+## how it works
 
 Borgsnap is pretty simple, it has the following basic flow:
 
@@ -51,16 +84,6 @@ If things fail, it is not currently re-entrant. For example, if a ZFS snapshot
 already exists for the day, the script will fail. This could use a bit of
 battle hardening, but has been working well for me for several months already.
 
-```
-usage: borgsnap <command> <config_file> [<args>]
-
-commands:
-    run             Run backup lifecycle.
-                    usage: borgsnap run <config_file>
-
-    snap            Run backup for specific snapshot.
-                    usage: borgsnap snap <config_file> <snapshot-name>
-```
 
 ## Restoring files
 
