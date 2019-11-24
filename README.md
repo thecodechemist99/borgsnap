@@ -43,7 +43,8 @@ pwgen 128 1 > /path/to/my/super/secret/myhost.key
 adapt sample.conf
 ```
 FS="zroot/root zroot/home zdata/data"
-OUT="/path/to/my/local/backup"
+LOCAL="/backup/borg"
+LOCAL_READABLE_BY_OTHERS=false
 REMOTE=""
 PASS="/path/to/my/super/secret/myhost.key"
 MONTH_KEEP=1

@@ -25,11 +25,11 @@
 # FS - List file ZFS filesystems to backup.
 #   Example: FS="zroot/root zroot/home zdata/data"
 #
-# OUT - If specified (not ""), directory for borg backups. Backups will be
+# LOCAL - If specified (not ""), directory for borg backups. Backups will be
 #       stored in subdirectories of pool and filesystem, for example
 #       "/backup/borg/zroot/root". This directory must be created prior to
 #       running borgsnap.
-#   Example: OUT="/backup/borg"
+#   Example: LOCAL="/backup/borg"
 #
 # REMOTE - If specified (not ""), remote connect string and directory. Only
 #          rsync.net has been tested. The remote directory (myhost in the
@@ -101,8 +101,8 @@ readconfigfile() {
   export BORG_PASSPHRASE
 
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
-  if [[ -n $OUT ]]; then
-    [[ -d $OUT ]] || die "Non-existent output directory $OUT"
+  if [[ -n $LOCAL ]]; then
+    [[ -d $LOCAL ]] || die "Non-existent output directory $LOCAL"
   fi
 }
 
@@ -134,6 +134,10 @@ dobackup() {
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
+    if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
+      echo "Set read permissions for others"
+      chmod +rx "${borgdir}" -R
+    fi
   fi
   if [[ -n $rsyncdir ]]; then
     echo "Doing remote backup of ${1}@${2}"
@@ -178,8 +182,8 @@ runBackup() {
   echo "====== $(date) ======"
   for i in $FS; do
     dataset=${i}
-    if [[ -n $OUT ]]; then
-      borgdir="$OUT/$dataset"
+    if [[ -n $LOCAL ]]; then
+      borgdir="$LOCAL/$dataset"
     else
       borgdir=""
     fi
@@ -247,8 +251,8 @@ backupSnapshot() {
 
   for i in $FS; do
     dataset=${i}
-    if [[ -n $OUT ]]; then
-      borgdir="$OUT/$dataset"
+    if [[ -n $LOCAL ]]; then
+      borgdir="$LOCAL/$dataset"
     else
       borgdir=""
     fi
