@@ -1,13 +1,15 @@
 # borgsnap - Backups using ZFS snapshots, borg, and (optionally) rsync.net
 
-*This fork adds recursive ZFS snapshot support and requires a new configuration
-variable "RECURSIVE"*
+*This fork adds COMPRESS variable to specify Borg compression method and 
+RECURSIVE for ZFS snapshot support
 
 *If RECURSIVE=true, borgsnap will create recursive ZFS snapshots for all
 nominated FS filesystems.  Each child filesystem snapshot will be mounted
 underneath the snapshot mount of the parent filesystem.  This allows borgsnap
 to backup the parent filesystem and all child filesystems in a single borgbackup
 repository.*
+
+*COMPRESS default in sample.conf is zstd*
 
 This is a simple script for doing automated daily backups of ZFS filesystems.
 It uses ZFS snapshots, but could easily be adaptable to other filesystems,
@@ -55,6 +57,7 @@ FS="zroot/root zroot/home zdata/data"
 LOCAL="/backup/borg"
 LOCAL_READABLE_BY_OTHERS=false
 RECURSIVE=true
+COMPRESS=zstd
 REMOTE=""
 PASS="/path/to/my/super/secret/myhost.key"
 MONTH_KEEP=1
