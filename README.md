@@ -43,7 +43,7 @@ your data.
 
 ## borgsnap installation
 ```
-git clone git@github.com:ManuelSchmitzberger/borgsnap.git
+git clone git@github.com:jortan/borgsnap.git
 ```
 
 generate key:
