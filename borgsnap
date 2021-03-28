@@ -31,6 +31,16 @@
 #       running borgsnap.
 #   Example: LOCAL="/backup/borg"
 #
+# LOCAL_READABLE_BY_OTHERS - Make borg repo readable by non-root
+#   Example: LOCAL_READABLE_BY_OTHERS=true
+#
+# RECURSIVE - Create recursive ZFS snapshots for all child filsystems beneath 
+#             all filesystems specified in "FS".  All child filesystems will
+#             be mounted for borgbackup.
+#   Example: RECURSIVE=true
+#            or
+#            RECURSIVE=false
+#
 # REMOTE - If specified (not ""), remote connect string and directory. Only
 #          rsync.net has been tested. The remote directory (myhost in the
 #          example) will be created if it does not exist.
@@ -115,10 +125,38 @@ findall() {
 }
 
 snapshot() {
-  echo "Snapshot ${1}@${2}"
-  zfs snapshot "${1}@${2}"
+  if [ "$RECURSIVE" = true ]; then
+    echo "Recursive snapshot ${1}@${2}"
+    zfs snapshot -r "${1}@${2}"
+  else
+    echo "Snapshot ${1}@${2}"
+    zfs snapshot "${1}@${2}"
+  fi
   # Sometimes it seems to take some time?
   sleep 5
+}
+
+recursivezfsmount() {
+  # $1 - volume, pool/dataset
+  # $2 - snapshot label
+  # Expects $bind_dir
+
+  for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"`; do
+    echo Mounting child filesystem snapshot: "$1$R@$2"
+    mkdir -p "$bind_dir$R"
+    mount -n -t zfs "$1$R@$2" "$bind_dir$R"
+  done
+}
+
+recursivezfsumount() {
+  # $1 - volume, pool/dataset
+  # $2 - snapshot label
+  # Expects $bind_dir
+
+  for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"`; do
+	echo Unmounting child filesystem snapshot: "$bind_dir$R"
+    umount -n "$bind_dir$R"
+  done
 }
 
 dobackup() {
@@ -130,6 +168,9 @@ dobackup() {
   bind_dir="${BINDDIR}/${1}"
   mkdir -p "$bind_dir"
   mount -t zfs "${1}@${2}" "$bind_dir"
+  if [ "$RECURSIVE" = true ]; then
+    recursivezfsmount $1 $2
+  fi
   BORG_OPTS="--info --stats --compression lz4 --exclude-if-present .noborg"
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
@@ -143,6 +184,10 @@ dobackup() {
     echo "Doing remote backup of ${1}@${2}"
     borg create $BORG_OPTS --remote-path=${BORGPATH} "${rsyncdir}::${2}" "$bind_dir"
   fi
+  if [ "$RECURSIVE" = true ]; then
+    recursivezfsumount $1 $2
+  fi
+
   umount "$bind_dir"
 }
 
@@ -162,7 +207,7 @@ purgeold() {
     echo "Keep: $3, found: $total, will delete $delete"
     for i in $(tail -n $delete <<<"$(findall "$1" "$2")"); do
       echo "Purging old snapshot $i"
-      zfs destroy "$i"
+      zfs destroy -r "$i"
     done
     BORG_OPTS="--info --stats --keep-daily=$DAY_KEEP --keep-weekly=$WEEK_KEEP --keep-monthly=$MONTH_KEEP"
     if [[ -n $borgdir ]]; then
