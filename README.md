@@ -1,7 +1,7 @@
 # borgsnap - Backups using ZFS snapshots, borg, and (optionally) rsync.net
 
 *This fork adds COMPRESS variable to specify Borg compression method and 
-RECURSIVE for recursive ZFS snapshot support
+RECURSIVE for recursive ZFS snapshot support*
 
 *If RECURSIVE=true, borgsnap will create recursive ZFS snapshots for all
 nominated FS filesystems.  Each child filesystem snapshot will be mounted
