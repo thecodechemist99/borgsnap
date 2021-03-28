@@ -67,7 +67,7 @@
 
 set -eu
 
-export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 export BINDDIR="/run/borgsnap"
 export BORGPATH="borg1" # "borg1" for rsync, otherwise "borg" as appropriate
 
