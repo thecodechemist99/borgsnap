@@ -8,7 +8,7 @@
 
 set -eu
 
-export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 
 usage() {
   echo "Usage: $0 <config_file> [borg options]" >&2
