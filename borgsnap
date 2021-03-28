@@ -47,6 +47,9 @@
 #   Example: REMOTE=""
 #   Example: REMOTE="XXXX@YYYY.rsync.net:myhost"
 #
+# COMPRESS - Choose compression algo for Borg backups.  Default for borgbackup
+#            is lz4, default here is zstd (which applies zstd,3)
+#
 # PASS - Path to a file containing a single line with the passphrase for borg
 #        encryption. I generate these with "pwgen 128 1 >/my/path/myhost.key".
 #   Example: PASS="/path/to/my/super/secret/myhost.key"
@@ -171,7 +174,7 @@ dobackup() {
   if [ "$RECURSIVE" = true ]; then
     recursivezfsmount $1 $2
   fi
-  BORG_OPTS="--info --stats --compression lz4 --exclude-if-present .noborg"
+  BORG_OPTS="--info --stats --compression $COMPRESS --exclude-if-present .noborg"
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
