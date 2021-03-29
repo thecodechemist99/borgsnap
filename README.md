@@ -106,6 +106,10 @@ If things fail, it is not currently re-entrant. For example, if a ZFS snapshot
 already exists for the day, the script will fail\*.  This could use a bit of
 battle hardening, but has been working well for me for several months already.
 
+\* If the script does fail, you can use "tidy" option.  This will make best
+effort to remove any mountpoints, delete today's zfs snapshots and borg
+archives, allowing borgsnap to be run again that day.  This was added mostly
+for test/dev purposes and may not work as intended!
 
 
 ## Restoring files
