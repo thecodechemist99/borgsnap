@@ -68,7 +68,7 @@
 # the last N snapshots matching the month-, week-, or day- labels. For borg,
 # this uses "borg prune" rather than "borg delete".
 
-set -eu
+set -u
 
 export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 export BINDDIR="/run/borgsnap"
@@ -139,6 +139,19 @@ snapshot() {
   sleep 5
 }
 
+destroysnapshot() {
+  if [ "$RECURSIVE" = true ]; then
+    echo "Recursive snapshot ${1}@${2}"
+    zfs destroy -r "${1}@${2}"
+  else
+    echo "Snapshot ${1}@${2}"
+    zfs destroy "${1}@${2}"
+  fi
+  # Sometimes it seems to take some time?
+  sleep 5
+}
+
+
 recursivezfsmount() {
   # $1 - volume, pool/dataset
   # $2 - snapshot label
@@ -147,7 +160,7 @@ recursivezfsmount() {
   for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"`; do
     echo Mounting child filesystem snapshot: "$1$R@$2"
     mkdir -p "$bind_dir$R"
-    mount -n -t zfs "$1$R@$2" "$bind_dir$R"
+    mount -t zfs "$1$R@$2" "$bind_dir$R"
   done
 }
 
@@ -158,7 +171,7 @@ recursivezfsumount() {
 
   for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"|tac`; do
 	echo Unmounting child filesystem snapshot: "$bind_dir$R"
-    umount -n "$bind_dir$R"
+    umount "$bind_dir$R"
   done
 }
 
@@ -170,7 +183,7 @@ dobackup() {
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
   mkdir -p "$bind_dir"
-  mount -n -t zfs "${1}@${2}" "$bind_dir"
+  mount -t zfs "${1}@${2}" "$bind_dir"
   if [ "$RECURSIVE" = true ]; then
     recursivezfsmount $1 $2
   fi
@@ -338,6 +351,68 @@ backupSnapshot() {
   done
 }
 
+tidybackup() {
+  # $1 - volume, i.e. zroot/home
+  # $2 - label, i.e. month-20170602
+  # Expects borgdir, BINDDIR
+
+  echo "------ $(date) ------"
+  bind_dir="${BINDDIR}/${1}"
+  if [[ -n $LOCAL ]]; then
+    borgdir="$LOCAL/$dataset"
+  else
+    borgdir=""
+  fi
+  mkdir -p "$bind_dir"
+  BORG_OPTS="--info --stats"
+  if [[ -n $borgdir ]]; then
+    echo "Deleting local backup of ${1}@${2}"
+    borg delete $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
+    if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
+      echo "Set read permissions for others"
+      chmod +rx "${borgdir}" -R
+    fi
+  fi
+}
+
+tidyUp() {
+  readconfigfile $1
+  echo "====== $(date) ======"
+  echo "Unmounting snapshots"
+  for f in $(mount | grep ' on /run/borgsnap/' | sed 's/^.* on //' | sed 's/\ type zfs.*//' | tac)
+  do
+    umount $f
+  done
+  echo "Removing todays snapshots / backups"
+  for i in $FS; do
+    dataset=${i}
+    lastmonth=$(findlast "$i" month)
+    if [[ -z $lastmonth ]]; then
+      forcemonth=1
+    fi
+
+    lastweek=$(findlast "$i" week)
+    if [[ -z $lastweek ]]; then
+      forceweek=1
+    fi
+
+    if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
+      label="month-$date"
+      destroysnapshot "$i" "$label"
+	  tidybackup "$i" "$label"
+    elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
+      label="week-$date"
+      destroysnapshot "$i" "$label"
+	  tidybackup "$i" "$label"
+    else
+      label="day-$date"
+      destroysnapshot "$i" "$label"
+	  tidybackup "$i" "$label"
+    fi
+  done
+  echo "Tidy Done $(date)"
+}
+
 if [ $# -eq 0 ];then
   usage
   exit
@@ -346,6 +421,7 @@ fi
 case "$1" in
   run) runBackup "${@:2}";;
   snap) backupSnapshot "${@:2}";;
+  tidy) tidyUp "${@:2}";;
   *) echo "$1 is an unknown command!" && usage;;
 esac
 exit

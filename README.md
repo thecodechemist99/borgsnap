@@ -11,6 +11,9 @@ repository.*
 
 *COMPRESS default in sample.conf is zstd*
 
+*set -e was removed, this fork of borgsnap will continue running if a command
+fails*
+
 This is a simple script for doing automated daily backups of ZFS filesystems.
 It uses ZFS snapshots, but could easily be adaptable to other filesystems,
 including those without snapshots.
@@ -75,6 +78,11 @@ commands:
 
     snap            Run backup for specific snapshot.
                     usage: borgsnap snap <config_file> <snapshot-name>
+					
+	tidy			Unmount and remove snapshots/local backups for today
+					usage: borgsnap tidy <config_file>
+					
+					Added for test/dev purposes, may not work as intended!
 ```
 
 ## how it works
@@ -95,8 +103,9 @@ Borgsnap is pretty simple, it has the following basic flow:
 That's it!
 
 If things fail, it is not currently re-entrant. For example, if a ZFS snapshot
-already exists for the day, the script will fail. This could use a bit of
+already exists for the day, the script will fail\*.  This could use a bit of
 battle hardening, but has been working well for me for several months already.
+
 
 
 ## Restoring files
