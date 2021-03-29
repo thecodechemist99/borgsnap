@@ -156,7 +156,7 @@ recursivezfsumount() {
   # $2 - snapshot label
   # Expects $bind_dir
 
-  for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"`; do
+  for R in `zfs list -Hr -t snapshot -o name $1|grep "@$2$"|sed -e "s@^$1@@" -e "s/@$2$//"|tac`; do
 	echo Unmounting child filesystem snapshot: "$bind_dir$R"
     umount -n "$bind_dir$R"
   done
