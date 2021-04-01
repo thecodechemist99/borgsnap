@@ -86,6 +86,9 @@ commands:
     snap            Run backup for specific snapshot.
                     usage: $(basename "$0") snap <config_file> <snapshot-name>
 
+    tidy            Unmount and remove snapshots/local backups for today
+                    usage: $(basename "$0") tidy <config_file>
+		    
 EOF
   exit 1
 }
@@ -116,6 +119,10 @@ readconfigfile() {
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
   if [[ -n $LOCAL ]]; then
     [[ -d $LOCAL ]] || die "Non-existent output directory $LOCAL"
+  fi
+  if [ -n "$BASEDIR" ]; then
+    BORG_BASE_DIR=$(< "$BASEDIR")
+    echo "Borgbackup basedir set to $BORG_BASE_DIR"
   fi
 }
 
