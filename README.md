@@ -1,7 +1,10 @@
 # borgsnap - Backups using ZFS snapshots, borg, and (optionally) rsync.net
 
-*This fork adds COMPRESS variable to specify Borg compression method and 
-RECURSIVE for recursive ZFS snapshot support*
+*This fork adds 
+
+* COMPRESS variable to specify Borg compression method
+* RECURSIVE for recursive ZFS snapshot support*
+* BASEDIR - set cache/config folders
 
 *If RECURSIVE=true, borgsnap will create recursive ZFS snapshots for all
 nominated FS filesystems.  Each child filesystem snapshot will be mounted
@@ -10,6 +13,10 @@ to backup the parent filesystem and all child filesystems in a single borgbackup
 repository.*
 
 *COMPRESS default in sample.conf is zstd*
+
+BASEDIR will configure BORG_BASE_DIR option, this will move the cache/config
+folders.  Added for unRAID where root home folder is not persistent.  If unset,
+BORG_BASE_DIR will default to $HOME
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*
@@ -79,10 +86,10 @@ commands:
     snap            Run backup for specific snapshot.
                     usage: borgsnap snap <config_file> <snapshot-name>
 					
-	tidy			Unmount and remove snapshots/local backups for today
-					usage: borgsnap tidy <config_file>
+    tidy            Unmount and remove snapshots/local backups for today
+                    usage: borgsnap tidy <config_file>
 					
-					Added for test/dev purposes, may not work as intended!
+                    Added for test/dev purposes, may not work as intended!
 ```
 
 ## how it works
