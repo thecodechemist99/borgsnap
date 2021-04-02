@@ -120,10 +120,16 @@ readconfigfile() {
   if [[ -n $LOCAL ]]; then
     [[ -d $LOCAL ]] || die "Non-existent output directory $LOCAL"
   fi
-  if [ -n "$BASEDIR" ]; then
-    BORG_BASE_DIR=$(< "$BASEDIR")
-    echo "Borgbackup basedir set to $BORG_BASE_DIR"
+  if [[ -n $BASEDIR ]]; then
+    if [[ -d $BASEDIR ]]; then
+      BORG_BASE_DIR=$BASEDIR
+      export BORG_BASE_DIR
+      echo "Borgbackup basedir set to $BORG_BASE_DIR"
+    else
+      die "Non-existant BASEDIR $BASEDIR"
+    fi
   fi
+
 }
 
 findlast() {
