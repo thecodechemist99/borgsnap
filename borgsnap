@@ -129,7 +129,13 @@ readconfigfile() {
       die "Non-existant BASEDIR $BASEDIR"
     fi
   fi
-
+  if [[ -n $CACHEMODE ]]; then
+    CACHEMODE="ctime,size,inode"
+    echo "CACHEMODE not configured, defaulting to ctime,size,inode"
+  else
+    echo "CACHEMODE set to $CACHEMODE"
+  fi
+  
 }
 
 findlast() {
@@ -200,7 +206,7 @@ dobackup() {
   if [ "$RECURSIVE" = true ]; then
     recursivezfsmount $1 $2
   fi
-  BORG_OPTS="--info --stats --compression $COMPRESS --exclude-if-present .noborg"
+  BORG_OPTS="--info --stats --compression $COMPRESS --files-cache $CACHEMODE --exclude-if-present .noborg"
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
