@@ -14,9 +14,12 @@ repository.*
 
 *COMPRESS default in sample.conf is zstd*
 
-BASEDIR will configure BORG_BASE_DIR option, this will move the cache/config
+_BASEDIR will configure BORG_BASE_DIR option, this will move the cache/config
 folders.  Added for unRAID where root home folder is not persistent.  If unset,
-BORG_BASE_DIR will default to $HOME
+BORG_BASE_DIR will default to $HOME_
+
+_CACHEMODE will configure how Borgbackup detects changed files
+https://borgbackup.readthedocs.io/en/stable/usage/create.html_
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*
@@ -65,9 +68,11 @@ adapt sample.conf
 ```
 FS="zroot/root zroot/home zdata/data"
 LOCAL="/backup/borg"
+BASEDIR=""
 LOCAL_READABLE_BY_OTHERS=false
 RECURSIVE=true
 COMPRESS=zstd
+CACHEMODE="mtime,size"
 REMOTE=""
 PASS="/path/to/my/super/secret/myhost.key"
 MONTH_KEEP=1
