@@ -36,7 +36,7 @@ normal remote borg destinations._
 _PRE_SCRIPT will run before taking a snapshot for each dataset.  The example
 provided demonstrates how to run a command only for a specific dataset._
 
-_POST_SCRIPT will run bfter taking a snapshot for each dataset.  The example
+_POST_SCRIPT will run after taking a snapshot for each dataset.  The example
 provided demonstrates how to run a command only for a specific dataset._
 
 *set -e was removed, this fork of borgsnap will continue running if a command
