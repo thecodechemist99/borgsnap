@@ -39,7 +39,7 @@ the full path to the script._
 
 _POST_SCRIPT will run after taking a snapshot for each dataset.  The example
 provided demonstrates how to run a command only for a specific dataset.  Specify
-the full path to the script.__
+the full path to the script._
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*
