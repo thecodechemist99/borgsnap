@@ -34,10 +34,12 @@ _REMOTE_BORG_PATH defaults to "borg1" for rsync.net.  Set this to "borg" for
 normal remote borg destinations._ 
 
 _PRE_SCRIPT will run before taking a snapshot for each dataset.  The example
-provided demonstrates how to run a command only for a specific dataset._
+provided demonstrates how to run a command only for a specific dataset.  Specify
+the full path to the script._
 
 _POST_SCRIPT will run after taking a snapshot for each dataset.  The example
-provided demonstrates how to run a command only for a specific dataset._
+provided demonstrates how to run a command only for a specific dataset.  Specify
+the full path to the script.__
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*
