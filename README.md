@@ -98,6 +98,8 @@ PASS="/path/to/my/super/secret/myhost.key"
 MONTH_KEEP=1
 WEEK_KEEP=4
 DAY_KEEP=7
+PRE_SCRIPT=
+POST_SCRIPT=
 ```
 
 how to:
