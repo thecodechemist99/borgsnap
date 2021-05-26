@@ -7,9 +7,9 @@ This fork adds:
 * BASEDIR - set cache/config folders
 * LOCALSKIP - Ignore LOCAL path, create/purge remote backups only
 * REMOTE_BORG_PATH - Configure remote borg command.  Defaults to borg1.
-
-The configuration file must include all options present in sample.conf, even
-if the option has no value specified.
+* PRE_SCRIPT and POST_SCRIPT - Run a script before or after taking ZFS snap
+**The configuration file must include all options present in sample.conf, even
+if the option has no value specified.**
 
 *If RECURSIVE=true, borgsnap will create recursive ZFS snapshots for all
 nominated FS filesystems.  Each child filesystem snapshot will be mounted
@@ -31,6 +31,12 @@ and purge operations on REMOTE target._
 
 _REMOTE_BORG_PATH defaults to "borg1" for rsync.net.  Set this to "borg" for
 normal remote borg destinations._ 
+
+_PRE_SCRIPT will run before taking a snapshot for each dataset.  The example
+provided demonstrates how to run a command only for a specific dataset._
+
+_POST_SCRIPT will run bfter taking a snapshot for each dataset.  The example
+provided demonstrates how to run a command only for a specific dataset._
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*

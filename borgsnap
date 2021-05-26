@@ -123,6 +123,18 @@ readconfigfile() {
   if [[ -n $LOCAL ]]; then
     [[ -d $LOCAL ]] || die "Non-existent output directory $LOCAL"
   fi
+  scriptpath="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+  echo "scriptpath is $scriptpath/$PRE_SCRIPT"
+  if [[ -n $PRE_SCRIPT ]]; then
+    [[ -f $PRE_SCRIPT ]] || die "PRE_SCRIPT specified but could not be found: $PRE_SCRIPT"
+    [[ -x $PRE_SCRIPT ]] || die "PRE_SCRIPT specified but could not be executed (run command: chmod +x $PRE_SCRIPT)"
+  fi
+
+  if [[ -n $POST_SCRIPT ]]; then
+    [[ -f $POST_SCRIPT ]] || die "POST_SCRIPT specified but could not be found: $POST_SCRIPT"
+    [[ -x $POST_SCRIPT ]] || die "POST_SCRIPT specified but could not be executed (run command: chmod +x $POST_SCRIPT)"
+  fi
+
   if [[ -n $BASEDIR ]]; then
     if [[ -d $BASEDIR ]]; then
       BORG_BASE_DIR=$BASEDIR
@@ -318,6 +330,15 @@ runBackup() {
       forceweek=1
     fi
 
+    if [[ -n $PRE_SCRIPT ]]; then
+      echo "====== $(date) ======"
+      echo "Executing pre-snapshot script: $PRE_SCRIPT"
+      if [[ -x $PRE_SCRIPT ]]; then
+        $PRE_SCRIPT $i
+	sleep 3
+      fi
+    fi      	    
+
     if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
       label="month-$date"
       snapshot "$i" "$label"
@@ -333,6 +354,14 @@ runBackup() {
       snapshot "$i" "$label"
       dobackup "$i" "$label"
       purgeold "$i" day "$DAY_KEEP"
+    fi
+
+    if [[ -n $POST_SCRIPT ]]; then
+      echo "====== $(date) ======"
+      echo "Executing post-snapshot script: $POST_SCRIPT"      
+      if [[ -x $POST_SCRIPT ]]; then
+        $POST_SCRIPT $i
+      fi
     fi
   done
   echo "====== $(date) ======"
