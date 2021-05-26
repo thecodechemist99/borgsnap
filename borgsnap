@@ -34,6 +34,9 @@
 # LOCAL_READABLE_BY_OTHERS - Make borg repo readable by non-root
 #   Example: LOCAL_READABLE_BY_OTHERS=true
 #
+# SKIPLOCAL - If specified, borgsnap will skip local backup destinations and
+#             only issue backup commands to REMOTE destination
+#
 # RECURSIVE - Create recursive ZFS snapshots for all child filsystems beneath 
 #             all filesystems specified in "FS".  All child filesystems will
 #             be mounted for borgbackup.
@@ -129,13 +132,22 @@ readconfigfile() {
       die "Non-existant BASEDIR $BASEDIR"
     fi
   fi
-  if [[ -n $CACHEMODE ]]; then
-    CACHEMODE="ctime,size,inode"
+  if [[ ! -n $CACHEMODE ]]; then
+    export CACHEMODE="ctime,size,inode"
     echo "CACHEMODE not configured, defaulting to ctime,size,inode"
   else
     echo "CACHEMODE set to $CACHEMODE"
+    export CACHEMODE
   fi
-  
+  if [[ ! -n $REMOTE_BORG_COMMAND ]]; then
+    export BORGPATH="borg1"
+    echo "REMOTE_BORG_COMMAND not configured, defaulting to $BORGPATH (for rsync.net)"
+  else
+    export BORGPATH=$REMOTE_BORG_COMMAND
+    echo "REMOTE_BORG_COMMAND set to $BORGPATH"
+  fi
+
+
 }
 
 findlast() {
@@ -207,13 +219,15 @@ dobackup() {
     recursivezfsmount $1 $2
   fi
   BORG_OPTS="--info --stats --compression $COMPRESS --files-cache $CACHEMODE --exclude-if-present .noborg"
-  if [[ -n $borgdir ]]; then
+  if [[ -n $borgdir && "$LOCALSKIP" != true ]]; then
     echo "Doing local backup of ${1}@${2}"
     borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
     if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
       echo "Set read permissions for others"
       chmod +rx "${borgdir}" -R
     fi
+  else
+    echo "Skipping local backup"
   fi
   if [[ -n $rsyncdir ]]; then
     echo "Doing remote backup of ${1}@${2}"
@@ -245,7 +259,7 @@ purgeold() {
       zfs destroy -r "$i"
     done
     BORG_OPTS="--info --stats --keep-daily=$DAY_KEEP --keep-weekly=$WEEK_KEEP --keep-monthly=$MONTH_KEEP"
-    if [[ -n $borgdir ]]; then
+    if [[ -n $borgdir && "$LOCALSKIP" != true ]]; then
       echo "Pruning local borg"
       borg prune $BORG_OPTS "$borgdir"
     fi
@@ -275,7 +289,7 @@ runBackup() {
 
     echo "Processing $dataset"
 
-    if [[ -n $borgdir && ! -d $borgdir ]]; then
+    if [[ -n $borgdir && ! -d $borgdir && "$LOCALSKIP" != true ]]; then
       echo "Initializing borg $borgdir"
       mkdir -p "$borgdir"
       borg init --encryption=repokey "$borgdir"
@@ -382,15 +396,27 @@ tidybackup() {
   else
     borgdir=""
   fi
+  if [[ -n $REMOTE ]]; then
+    rsyncdir="$REMOTE/$dataset"
+  else
+    rsyncdir=""
+  fi
   mkdir -p "$bind_dir"
   BORG_OPTS="--info --stats"
-  if [[ -n $borgdir ]]; then
+  if [[ -n $borgdir && $LOCALSKIP != true ]]; then
     echo "Deleting local backup of ${1}@${2}"
-    borg delete $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
+    borg delete $BORG_OPTS "${borgdir}::${2}" 
     if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
       echo "Set read permissions for others"
       chmod +rx "${borgdir}" -R
     fi
+  fi
+
+
+
+  if [[ -n $rsyncdir ]]; then
+    echo "Deleting remote backup of ${1}@${2}"
+    borg delete $BORG_OPTS --remote-path=${BORGPATH} $BORG_OPTS "$rsyncdir::${2}"
   fi
 }
 

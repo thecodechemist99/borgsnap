@@ -1,10 +1,15 @@
 # borgsnap - Backups using ZFS snapshots, borg, and (optionally) rsync.net
 
-*This fork adds 
+This fork adds:
 
-* COMPRESS variable to specify Borg compression method
-* RECURSIVE for recursive ZFS snapshot support*
+* COMPRESS - variable to specify Borg compression method
+* RECURSIVE - for recursive ZFS snapshot support
 * BASEDIR - set cache/config folders
+* LOCALSKIP - Ignore LOCAL path, create/purge remote backups only
+* REMOTE_BORG_PATH - Configure remote borg command.  Defaults to borg1.
+
+The configuration file must include all options present in sample.conf, even
+if the option has no value specified.
 
 *If RECURSIVE=true, borgsnap will create recursive ZFS snapshots for all
 nominated FS filesystems.  Each child filesystem snapshot will be mounted
@@ -20,6 +25,12 @@ BORG_BASE_DIR will default to $HOME_
 
 _CACHEMODE will configure how Borgbackup detects changed files
 https://borgbackup.readthedocs.io/en/stable/usage/create.html_
+
+_LOCALSKIP will skip LOCAL path for all operations and only perform backups
+and purge operations on REMOTE target._
+
+_REMOTE_BORG_PATH defaults to "borg1" for rsync.net.  Set this to "borg" for
+normal remote borg destinations._ 
 
 *set -e was removed, this fork of borgsnap will continue running if a command
 fails*
@@ -70,10 +81,12 @@ FS="zroot/root zroot/home zdata/data"
 LOCAL="/backup/borg"
 BASEDIR=""
 LOCAL_READABLE_BY_OTHERS=false
+LOCALSKIP=false
 RECURSIVE=true
 COMPRESS=zstd
 CACHEMODE="mtime,size"
 REMOTE=""
+REMOTE_BORG_COMMAND=
 PASS="/path/to/my/super/secret/myhost.key"
 MONTH_KEEP=1
 WEEK_KEEP=4
@@ -95,6 +108,9 @@ commands:
                     usage: borgsnap tidy <config_file>
 					
                     Added for test/dev purposes, may not work as intended!
+
+                    Note: this will unmount all snapshots mounted by borgsnap
+                    including other running instances.	
 ```
 
 ## how it works
