@@ -8,6 +8,7 @@ This fork adds:
 * LOCALSKIP - Ignore LOCAL path, create/purge remote backups only
 * REMOTE_BORG_PATH - Configure remote borg command.  Defaults to borg1.
 * PRE_SCRIPT and POST_SCRIPT - Run a script before or after taking ZFS snap
+
 **The configuration file must include all options present in sample.conf, even
 if the option has no value specified.**
 
