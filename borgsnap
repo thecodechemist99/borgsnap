@@ -118,7 +118,7 @@ readconfigfile() {
   BORG_PASSPHRASE=$(< "$PASS")
   export BORG_PASSPHRASE
 
-  BORG_RSH=$("$RSH")
+  BORG_RSH=$RSH
   export BORG_RSH
 
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
