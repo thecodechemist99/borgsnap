@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/tcsh
 
 #
 # If this script is called by borgsnap it will run for all datasets configured.
@@ -7,7 +7,7 @@
 # this script on a specific dataset, use an if statement to check as below:
 #
 
-if [[ "$1" = "pool/dataset1" ]]; then
+if ("$1" == "pool/dataset1") then
   echo do stuff!
   sleep 10
-fi
+endif
