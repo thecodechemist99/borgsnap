@@ -118,6 +118,9 @@ readconfigfile() {
   BORG_PASSPHRASE=$(< "$PASS")
   export BORG_PASSPHRASE
 
+  BORG_RSH=$("$RSH")
+  export BORG_RSH
+
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
   if [[ -n $LOCAL ]]; then
     [[ -d $LOCAL ]] || die "Non-existent output directory $LOCAL"
