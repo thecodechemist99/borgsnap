@@ -75,7 +75,7 @@ set -u
 
 export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 export BINDDIR="/run/borgsnap"
-export BORGPATH="borg1" # "borg1" for rsync, otherwise "borg" as appropriate
+export BORGPATH="borg1" # "borg1" for rsync.net, otherwise "borg" as appropriate
 
 usage() {
   cat << EOF
@@ -111,7 +111,6 @@ forcemonth=0
 forceweek=0
 
 readconfigfile() {
-  [[ $# == 1 ]] || usage
   [[ -r $1 ]] || die "Unable to open $1"
 
   source "$1"
@@ -283,7 +282,7 @@ purgeold() {
 }
 
 runBackup() {
-  readconfigfile $1
+  [[ $# == 1 ]] && readconfigfile $1 || usage
 
   echo "====== $(date) ======"
   for i in $FS; do
@@ -370,7 +369,7 @@ runBackup() {
 }
 
 backupSnapshot() {
-  readconfigfile $1
+  [[ $# == 1 ]] && readconfigfile $1 || usage
 
   for i in $FS; do
     dataset=${i}
@@ -450,7 +449,7 @@ tidybackup() {
 }
 
 tidyUp() {
-  readconfigfile $1
+  [[ $# == 1 ]] && readconfigfile $1 || usage
   echo "====== $(date) ======"
   echo "Unmounting snapshots"
   for f in $(mount | grep ' on /run/borgsnap/' | sed 's/^.* on //' | sed 's/\ type zfs.*//' | tac)
@@ -496,6 +495,7 @@ case "$1" in
   run) runBackup "${@:2}";;
   snap) backupSnapshot "${@:2}";;
   tidy) tidyUp "${@:2}";;
+  -h) usage;;
   *) echo "$1 is an unknown command!" && usage;;
 esac
 exit
