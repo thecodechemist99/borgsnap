@@ -73,7 +73,7 @@
 
 set -u
 
-#export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
+export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 export BINDDIR="/run/borgsnap"
 export BORGPATH="borg1" # "borg1" for rsync.net, otherwise "borg" as appropriate
 
@@ -320,11 +320,11 @@ runBackup() {
         dir=${REMOTE#*:}
       fi
       set +e
-      ${BORG_RSH} "$host" test -d "$dir/$dataset"
+      $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        ${BORG_RSH} "$host" mkdir -p "$dir/$dataset"
+        $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
@@ -412,11 +412,11 @@ backupSnapshot() {
         dir=${REMOTE#*:}
       fi
       set +e
-      sftp ${BORG_RSH#*ssh} "$host" test -d "$dir/$dataset"
+      $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        ${BORG_RSH} "$host" mkdir -p "$dir/$dataset"
+        $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
