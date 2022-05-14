@@ -494,7 +494,7 @@ tidyUp() {
   [[ $# == 1 ]] && readconfigfile $1 || usage
   echo "====== $(date) ======"
   echo "Unmounting snapshots"
-  for f in $(mount | grep ' on /run/borgsnap/' | sed 's/^.* on //' | sed 's/\ type zfs.*//' | tac)
+  for f in $(mount | grep ' on /run/borgsnap/' | sed 's/^.* on //' | sed 's/\ type zfs.*//' | tail -r)
   do
     umount $f
   done
