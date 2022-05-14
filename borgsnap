@@ -311,8 +311,14 @@ runBackup() {
       borg init --encryption=repokey "$localdir"
     fi
     if [[ -n $remotedir ]]; then
-      host=${REMOTE%:*}
-      dir=${REMOTE#*:}
+      if [[ $WITH_PORT == true ]]
+        stripped_remote=${REMOTE/"ssh://"/}
+        host=ssh://${REMOTE%%/*}
+        dir=${REMOTE#*/}
+      else
+        host=${REMOTE%:*}
+        dir=${REMOTE#*:}
+      fi
       set +e
       ${BORG_RSH} "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
