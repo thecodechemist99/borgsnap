@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # borgsnap - licensed under GPLv3. See the LICENSE file for additional
 # details.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # If this script is called by borgsnap it will run for all datasets configured.
