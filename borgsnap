@@ -415,7 +415,7 @@ runBackup() {
 }
 
 backupSnapshot() {
-  [[ $# == 1 ]] && readconfigfile $1 || usage
+  [[ $# == 2 ]] && readconfigfile $1 || usage
 
   for i in $FS; do
     dataset=${i}
