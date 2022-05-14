@@ -273,6 +273,7 @@ dobackup() {
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
   mkdir -p "$bind_dir"
+  chmod +rw "$bind_dir"
   mount -t zfs "${1}@${2}" "$bind_dir"
   if [ "$RECURSIVE" = true ]; then
     recursivezfsmount $1 $2
@@ -472,6 +473,7 @@ tidybackup() {
     remotedir=""
   fi
   mkdir -p "$bind_dir"
+  chmod +rw "$bind_dir"
   BORG_OPTS="--info --stats"
   if [[ -n $localdir && $LOCALSKIP != true ]]; then
     echo "Deleting local backup of ${1}@${2}"
