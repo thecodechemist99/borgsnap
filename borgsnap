@@ -230,7 +230,7 @@ checkdirexists() {
     host=${stripped_remote%%:*}
     dir=${stripped_remote#*/}
     port_semi=${stripped_remote#*:}
-    port=${stripped_remote#*/} && [[ -n $port ]] || port=22
+    port=${stripped_remote%%/*} && [[ -n $port ]] || port=22
   else
     host=${REMOTE%:*}
     dir=${REMOTE#*:}
@@ -252,7 +252,7 @@ createdir() {
     host=${stripped_remote%%:*}
     dir=${stripped_remote#*/}
     port_semi=${stripped_remote#*:}
-    port=${stripped_remote#*/} && [[ -n $port ]] || port=22
+    port=${stripped_remote%%/*} && [[ -n $port ]] || port=22
   else
     host=${REMOTE%:*}
     dir=${REMOTE#*:}
