@@ -222,6 +222,51 @@ recursivezfsumount() {
   done
 }
 
+checkdirexists() {
+  # $1 - remote directory
+
+  if [[ $WITH_PORT == true ]]; then
+    stripped_path=${REMOTE/"ssh://"/}
+    remote=${stripped_path%%/*}
+    host=ssh://${remote%:*}
+    dir=${remote#*/}
+    port=${remote#*:} && [[ -n $port ]] || port=22
+  else
+    host=${REMOTE%:*}
+    dir=${REMOTE#*:}
+  fi
+  set +e
+  if [[ REMOTE_DIR_METHOD == "sftp" ]]; then
+    echo sftp -p $port ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
+    sftp -p $port ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
+  else
+    ssh "$host" test -d "$dir/$dataset"
+  fi
+}
+
+createdir() {
+  # $1 - remote directory
+  set +e
+  if [[ $WITH_PORT == true ]]; then
+    stripped_path=${REMOTE/"ssh://"/}
+    remote=${stripped_path%%/*}
+    host=ssh://${remote%:*}
+    dir=${remote#*/}
+    port=${remote#*:} && [[ -n $port ]] || port=22
+  else
+    host=${REMOTE%:*}
+    dir=${REMOTE#*:}
+  fi
+  set -e
+  if [[ REMOTE_DIR_METHOD == "sftp" ]]; then
+    echo sftp -p $port ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
+    sftp -p $port ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
+  else
+    ssh "$host" mkdir -p "$dir/$dataset"
+  fi
+
+}
+
 dobackup() {
   # $1 - volume, i.e. zroot/home
   # $2 - label, i.e. monthly-20170602
@@ -311,17 +356,7 @@ runBackup() {
       borg init --encryption=repokey "$localdir"
     fi
     if [[ -n $remotedir ]]; then
-      if [[ $WITH_PORT == true ]]; then
-        stripped_remote=${REMOTE/"ssh://"/}
-        host=ssh://${stripped_remote%%/*}
-        dir=${stripped_remote#*/}
-      else
-        host=${REMOTE%:*}
-        dir=${REMOTE#*:}
-      fi
-      set +e
-      echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
-      $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
+      checkdirexists $remotedir
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
@@ -405,22 +440,11 @@ backupSnapshot() {
       borg init --encryption=repokey "$localdir"
     fi
     if [[ -n $remotedir ]]; then
-      if [[ $WITH_PORT == true ]]; then
-        stripped_remote=${REMOTE/"ssh://"/}
-        host=ssh://${stripped_remote%%/*}
-        dir=${stripped_remote#*/}
-      else
-        host=${REMOTE%:*}
-        dir=${REMOTE#*:}
-      fi
-      set +e
-      echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
-      $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
+    checkdirexists $remotedir
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
-        $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
+        createdir $remotedir
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
