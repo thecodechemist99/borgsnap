@@ -342,17 +342,17 @@ runBackup() {
     fi      	    
 
     if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
-      label="month-$date"
+      label="monthly-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
       purgeold "$i" month "$MONTH_KEEP"
     elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
-      label="week-$date"
+      label="weekly-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
       purgeold "$i" week "$WEEK_KEEP"
     else
-      label="day-$date"
+      label="dayly-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
       purgeold "$i" day "$DAY_KEEP"
