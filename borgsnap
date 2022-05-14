@@ -4,14 +4,14 @@
 # details.
 #
 # Perform a ZFS snapshot and rolling backups using borg.
-# On the first of the month, a snapshot is done labeled "month-".
-# Otherwise every Sunday, a snapshot is done is done labeled "week-".
-# Otherwise every day, a snapshot is done labeled "day-".
-# If no month- or week- snapshots already exist, these will be done even
+# On the first of the month, a snapshot is done labeled "monthly-".
+# Otherwise every Sunday, a snapshot is done is done labeled "weekly-".
+# Otherwise every day, a snapshot is done labeled "daily-".
+# If no monthly- or weekly- snapshots already exist, these will be done even
 # if it is not the first of the month or Sunday.
 #
-# Keep up to MONTH_KEEP month backups, WEEK_KEEP week backups, and
-# DAY_KEEP day backups.
+# Keep up to MONTHLY_KEEP monthly backups, WEEKLY_KEEP weekly backups, and
+# DAILY_KEEP daily backups.
 #
 # Usage: borgsnap <command> <config_file> [<args>]
 #
@@ -22,11 +22,11 @@
 # defaults, all options must be specified. See the example configuration files
 # to use as a template.
 #
-# FS - List file ZFS filesystems to backup.
+# FS - List ZFS filesystems to backup.
 #   Example: FS="zroot/root zroot/home zdata/data"
 #
-# LOCAL - If specified (not ""), directory for borg backups. Backups will be
-#       stored in subdirectories of pool and filesystem, for example
+# LOCAL - If specified (not ""), directory for local borgbackups. Backups
+#       will be stored in subdirectories of pool and filesystem, for example
 #       "/backup/borg/zroot/root". This directory must be created prior to
 #       running borgsnap.
 #   Example: LOCAL="/backup/borg"
@@ -38,13 +38,13 @@
 #             only issue backup commands to REMOTE destination
 #
 # RECURSIVE - Create recursive ZFS snapshots for all child filsystems beneath 
-#             all filesystems specified in "FS".  All child filesystems will
+#             all filesystems specified in "FS". All child filesystems will
 #             be mounted for borgbackup.
 #   Example: RECURSIVE=true
 #            or
 #            RECURSIVE=false
 #
-# COMPRESS - Choose compression algo for Borg backups.  Default for borgbackup
+# COMPRESS - Choose compression algorithm for Borg backups. Default for borgbackup
 #            is lz4, default here is zstd (which applies zstd,3)
 #
 # REMOTE - If specified (not ""), remote connect string and directory. Only
@@ -57,18 +57,18 @@
 #        encryption. I generate these with "pwgen 128 1 >/my/path/myhost.key".
 #   Example: PASS="/path/to/my/super/secret/myhost.key"
 #
-# MONTH_KEEP - Number of month backups to keep.
-#   Example: MONTH_KEEP=1
+# MONTHLY_KEEP - Number of monthly backups to keep.
+#   Example: MONTHLY_KEEP=1
 #
-# WEEK_KEEP - Number of week backups to keep.
-#   Example: WEEK_KEEP=4
+# WEEKLY_KEEP - Number of weekly backups to keep.
+#   Example: WEEKLY_KEEP=4
 #
-# DAY_KEEP - Number of day backups to keep.
-#   Example: DAY_KEEP=7
+# DAILY_KEEP - Number of daily backups to keep.
+#   Example: DAILY_KEEP=7
 #
 # Note that semantics for lifecycles differ for local ZFS snapshots,
 # local borg, and remote borg backups. For ZFS snapshots, we delete all but
-# the last N snapshots matching the month-, week-, or day- labels. For borg,
+# the last N snapshots matching the monthly-, weekly-, or daily- labels. For borg,
 # this uses "borg prune" rather than "borg delete".
 
 set -u
@@ -110,8 +110,6 @@ date=$(date +"%Y%m%d")
 forcemonth=0
 forceweek=0
 
-ssh=ssh
-
 readconfigfile() {
   [[ -r $1 ]] || die "Unable to open $1"
 
@@ -121,10 +119,11 @@ readconfigfile() {
   export BORG_PASSPHRASE
 
   if [[ -n $RSH ]]; then
-    ssh=$RSH
     BORG_RSH=$RSH
-    export BORG_RSH
+  else
+    BORG_RSH=ssh
   fi
+  export BORG_RSH
 
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
   if [[ -n $LOCAL ]]; then
@@ -261,7 +260,7 @@ dobackup() {
 
 purgeold() {
   # $1 - volume, i.e. zroot/home
-  # $2 - prefix, i.e. month, week, or day
+  # $2 - prefix, i.e. monthly, weekly, or daily
   # $3 - number to keep
   # Expects localdir, remotedir
 
@@ -277,7 +276,7 @@ purgeold() {
       echo "Purging old snapshot $i"
       zfs destroy -r "$i"
     done
-    BORG_OPTS="--info --stats --keep-daily=$DAY_KEEP --keep-weekly=$WEEK_KEEP --keep-monthly=$MONTH_KEEP"
+    BORG_OPTS="--info --stats --keep-daily=$DAILY_KEEP --keep-weekly=$WEEKLY_KEEP --keep-monthly=$MONTHLY_KEEP"
     if [[ -n $localdir && "$LOCALSKIP" != true ]]; then
       echo "Pruning local borg"
       borg prune $BORG_OPTS "$localdir"
@@ -317,22 +316,22 @@ runBackup() {
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
-      $ssh "$host" test -d "$dir/$dataset"
+      ${BORG_RSH} "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        $ssh "$host" mkdir -p "$dir/$dataset"
+        ${BORG_RSH} "$host" mkdir -p "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
     fi
 
-    lastmonth=$(findlast "$i" month)
+    lastmonth=$(findlast "$i" monthly)
     if [[ -z $lastmonth ]]; then
       forcemonth=1
     fi
 
-    lastweek=$(findlast "$i" week)
+    lastweek=$(findlast "$i" weekly)
     if [[ -z $lastweek ]]; then
       forceweek=1
     fi
@@ -350,17 +349,17 @@ runBackup() {
       label="monthly-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
-      purgeold "$i" month "$MONTH_KEEP"
+      purgeold "$i" monthly "$MONTHLY_KEEP"
     elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
       label="weekly-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
-      purgeold "$i" week "$WEEK_KEEP"
+      purgeold "$i" weekly "$WEEKLY_KEEP"
     else
-      label="dayly-$date"
+      label="daily-$date"
       snapshot "$i" "$label"
       dobackup "$i" "$label"
-      purgeold "$i" day "$DAY_KEEP"
+      purgeold "$i" daily "$DAILY_KEEP"
     fi
 
     if [[ -n $POST_SCRIPT ]]; then
@@ -403,11 +402,11 @@ backupSnapshot() {
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
-      $ssh "$host" test -d "$dir/$dataset"
+      ${BORG_RSH} "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        $ssh "$host" mkdir -p "$dir/$dataset"
+        ${BORG_RSH} "$host" mkdir -p "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
@@ -422,7 +421,7 @@ backupSnapshot() {
 
 tidybackup() {
   # $1 - volume, i.e. zroot/home
-  # $2 - label, i.e. month-20170602
+  # $2 - label, i.e. monthly-20170602
   # Expects localdir, BINDDIR
 
   echo "------ $(date) ------"
@@ -486,7 +485,7 @@ tidyUp() {
       destroysnapshot "$i" "$label"
 	  tidybackup "$i" "$label"
     else
-      label="dayly-$date"
+      label="daily-$date"
       destroysnapshot "$i" "$label"
 	  tidybackup "$i" "$label"
     fi
