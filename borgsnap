@@ -237,6 +237,7 @@ checkdirexists() {
   fi
   set +e
   if [[ REMOTE_DIR_METHOD == "sftp" ]]; then
+    echo "echo 'cd $dir/$dataset' | sftp -b - -P $port ${BORG_RSH#ssh} '$host'"
     echo "cd $dir/$dataset" | sftp -b - -P $port ${BORG_RSH#ssh} "$host"
   else
     ssh -p $port "$host" test -d "$dir/$dataset"
@@ -258,6 +259,7 @@ createdir() {
   fi
   set -e
   if [[ REMOTE_DIR_METHOD == "sftp" ]]; then
+    echo "echo 'mkdir $dir/$dataset' | sftp -b - -P $port ${BORG_RSH#ssh} '$host'"
     echo "mkdir $dir/$dataset" | sftp -b - -P $port ${BORG_RSH#ssh} "$host"
   else
     ssh -p $port "$host" mkdir -p "$dir/$dataset"
