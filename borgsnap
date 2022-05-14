@@ -73,7 +73,7 @@
 
 set -u
 
-export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
+#export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin"
 export BINDDIR="/run/borgsnap"
 export BORGPATH="borg1" # "borg1" for rsync.net, otherwise "borg" as appropriate
 
@@ -227,8 +227,8 @@ recursivezfsumount() {
 
 dobackup() {
   # $1 - volume, i.e. zroot/home
-  # $2 - label, i.e. month-20170602
-  # Expects borgdir, rsyncdir, BINDDIR
+  # $2 - label, i.e. monthly-20170602
+  # Expects localdir, remotedir, BINDDIR
 
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
@@ -238,19 +238,19 @@ dobackup() {
     recursivezfsmount $1 $2
   fi
   BORG_OPTS="--info --stats --compression $COMPRESS --files-cache $CACHEMODE --exclude-if-present .noborg"
-  if [[ -n $borgdir && "$LOCALSKIP" != true ]]; then
+  if [[ -n $localdir && "$LOCALSKIP" != true ]]; then
     echo "Doing local backup of ${1}@${2}"
-    borg create $BORG_OPTS "${borgdir}::${2}" "$bind_dir"
+    borg create $BORG_OPTS "${localdir}::${2}" "$bind_dir"
     if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
       echo "Set read permissions for others"
-      chmod +rx "${borgdir}" -R
+      chmod +rx "${localdir}" -R
     fi
   else
     echo "Skipping local backup"
   fi
-  if [[ -n $rsyncdir ]]; then
+  if [[ -n $remotedir ]]; then
     echo "Doing remote backup of ${1}@${2}"
-    borg create $BORG_OPTS --remote-path=${BORGPATH} "${rsyncdir}::${2}" "$bind_dir"
+    borg create $BORG_OPTS --remote-path=${BORGPATH} "${remotedir}::${2}" "$bind_dir"
   fi
   if [ "$RECURSIVE" = true ]; then
     recursivezfsumount $1 $2
@@ -263,7 +263,7 @@ purgeold() {
   # $1 - volume, i.e. zroot/home
   # $2 - prefix, i.e. month, week, or day
   # $3 - number to keep
-  # Expects borgdir, rsyncdir
+  # Expects localdir, remotedir
 
   echo "------ $(date) ------"
   total=$(wc -l <<<"$(findall "$1" "$2")")
@@ -278,13 +278,13 @@ purgeold() {
       zfs destroy -r "$i"
     done
     BORG_OPTS="--info --stats --keep-daily=$DAY_KEEP --keep-weekly=$WEEK_KEEP --keep-monthly=$MONTH_KEEP"
-    if [[ -n $borgdir && "$LOCALSKIP" != true ]]; then
+    if [[ -n $localdir && "$LOCALSKIP" != true ]]; then
       echo "Pruning local borg"
-      borg prune $BORG_OPTS "$borgdir"
+      borg prune $BORG_OPTS "$localdir"
     fi
-    if [[ -n $rsyncdir ]]; then
+    if [[ -n $remotedir ]]; then
       echo "Pruning remote borg"
-      borg prune $BORG_OPTS --remote-path=${BORGPATH} "$rsyncdir"
+      borg prune $BORG_OPTS --remote-path=${BORGPATH} "$remotedir"
     fi
   fi
 }
@@ -296,33 +296,33 @@ runBackup() {
   for i in $FS; do
     dataset=${i}
     if [[ -n $LOCAL ]]; then
-      borgdir="$LOCAL/$dataset"
+      localdir="$LOCAL/$dataset"
     else
-      borgdir=""
+      localdir=""
     fi
     if [[ -n $REMOTE ]]; then
-      rsyncdir="$REMOTE/$dataset"
+      remotedir="$REMOTE/$dataset"
     else
-      rsyncdir=""
+      remotedir=""
     fi
 
     echo "Processing $dataset"
 
-    if [[ -n $borgdir && ! -d $borgdir && "$LOCALSKIP" != true ]]; then
-      echo "Initializing borg $borgdir"
-      mkdir -p "$borgdir"
-      borg init --encryption=repokey "$borgdir"
+    if [[ -n $localdir && ! -d $localdir && "$LOCALSKIP" != true ]]; then
+      echo "Initializing borg $localdir"
+      mkdir -p "$localdir"
+      borg init --encryption=repokey "$localdir"
     fi
-    if [[ -n $rsyncdir ]]; then
+    if [[ -n $remotedir ]]; then
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
       $ssh "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
-        echo "Initializing remote $rsyncdir"
+        echo "Initializing remote $remotedir"
         $ssh "$host" mkdir -p "$dir/$dataset"
-        borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
+        borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
     fi
@@ -382,33 +382,33 @@ backupSnapshot() {
   for i in $FS; do
     dataset=${i}
     if [[ -n $LOCAL ]]; then
-      borgdir="$LOCAL/$dataset"
+      localdir="$LOCAL/$dataset"
     else
-      borgdir=""
+      localdir=""
     fi
     if [[ -n $REMOTE ]]; then
-      rsyncdir="$REMOTE/$dataset"
+      remotedir="$REMOTE/$dataset"
     else
-      rsyncdir=""
+      remotedir=""
     fi
 
     echo "Processing $dataset"
 
-    if [[ -n $borgdir && ! -d $borgdir ]]; then
-      echo "Initializing borg $borgdir"
-      mkdir -p "$borgdir"
-      borg init --encryption=repokey "$borgdir"
+    if [[ -n $localdir && ! -d $localdir ]]; then
+      echo "Initializing borg $localdir"
+      mkdir -p "$localdir"
+      borg init --encryption=repokey "$localdir"
     fi
-    if [[ -n $rsyncdir ]]; then
+    if [[ -n $remotedir ]]; then
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
       $ssh "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
-        echo "Initializing remote $rsyncdir"
+        echo "Initializing remote $remotedir"
         $ssh "$host" mkdir -p "$dir/$dataset"
-        borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
+        borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
     fi
@@ -423,36 +423,36 @@ backupSnapshot() {
 tidybackup() {
   # $1 - volume, i.e. zroot/home
   # $2 - label, i.e. month-20170602
-  # Expects borgdir, BINDDIR
+  # Expects localdir, BINDDIR
 
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
   if [[ -n $LOCAL ]]; then
-    borgdir="$LOCAL/$dataset"
+    localdir="$LOCAL/$dataset"
   else
-    borgdir=""
+    localdir=""
   fi
   if [[ -n $REMOTE ]]; then
-    rsyncdir="$REMOTE/$dataset"
+    remotedir="$REMOTE/$dataset"
   else
-    rsyncdir=""
+    remotedir=""
   fi
   mkdir -p "$bind_dir"
   BORG_OPTS="--info --stats"
-  if [[ -n $borgdir && $LOCALSKIP != true ]]; then
+  if [[ -n $localdir && $LOCALSKIP != true ]]; then
     echo "Deleting local backup of ${1}@${2}"
-    borg delete $BORG_OPTS "${borgdir}::${2}" 
+    borg delete $BORG_OPTS "${localdir}::${2}" 
     if [ ${LOCAL_READABLE_BY_OTHERS} ]; then
       echo "Set read permissions for others"
-      chmod +rx "${borgdir}" -R
+      chmod +rx "${localdir}" -R
     fi
   fi
 
 
 
-  if [[ -n $rsyncdir ]]; then
+  if [[ -n $remotedir ]]; then
     echo "Deleting remote backup of ${1}@${2}"
-    borg delete $BORG_OPTS --remote-path=${BORGPATH} $BORG_OPTS "$rsyncdir::${2}"
+    borg delete $BORG_OPTS --remote-path=${BORGPATH} $BORG_OPTS "$remotedir::${2}"
   fi
 }
 
@@ -467,26 +467,26 @@ tidyUp() {
   echo "Removing todays snapshots / backups"
   for i in $FS; do
     dataset=${i}
-    lastmonth=$(findlast "$i" month)
+    lastmonth=$(findlast "$i" monthly)
     if [[ -z $lastmonth ]]; then
       forcemonth=1
     fi
 
-    lastweek=$(findlast "$i" week)
+    lastweek=$(findlast "$i" weekly)
     if [[ -z $lastweek ]]; then
       forceweek=1
     fi
 
     if [[ $forcemonth == 1 || $dom -eq 1 ]]; then
-      label="month-$date"
+      label="monthly-$date"
       destroysnapshot "$i" "$label"
 	  tidybackup "$i" "$label"
     elif [[ $forceweek == 1 || $dow -eq 0 ]]; then
-      label="week-$date"
+      label="weekly-$date"
       destroysnapshot "$i" "$label"
 	  tidybackup "$i" "$label"
     else
-      label="day-$date"
+      label="dayly-$date"
       destroysnapshot "$i" "$label"
 	  tidybackup "$i" "$label"
     fi
@@ -494,7 +494,7 @@ tidyUp() {
   echo "Tidy Done $(date)"
 }
 
-if [ $# -eq 0 ];then
+if [ $# -eq 0 ]; then
   usage
   exit
 fi
@@ -506,4 +506,5 @@ case "$1" in
   -h) usage;;
   *) echo "$1 is an unknown command!" && usage;;
 esac
+
 exit
