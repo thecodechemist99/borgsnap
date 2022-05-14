@@ -360,8 +360,7 @@ runBackup() {
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
-        echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
-        $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
+        createdir $remotedir
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
       set -e
