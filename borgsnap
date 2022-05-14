@@ -400,7 +400,7 @@ backupSnapshot() {
       if [[ $WITH_PORT == true ]]
         stripped_remote=${REMOTE/"ssh://"/}
         host=ssh://${REMOTE%%/*}
-        dir=ssh://${REMOTE#*/}
+        dir=${REMOTE#*/}
       else
         host=${REMOTE%:*}
         dir=${REMOTE#*:}
