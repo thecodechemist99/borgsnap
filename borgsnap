@@ -320,10 +320,12 @@ runBackup() {
         dir=${REMOTE#*:}
       fi
       set +e
+      echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
+        echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
@@ -412,10 +414,12 @@ backupSnapshot() {
         dir=${REMOTE#*:}
       fi
       set +e
+      echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" cd "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
+        echo $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         $REMOTE_DIR_METHOD ${BORG_RSH#ssh} "$host" mkdir "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$remotedir"
       fi
