@@ -226,11 +226,10 @@ checkdirexists() {
   # $1 - remote directory
 
   if [[ $WITH_PORT == true ]]; then
-    stripped_path=${REMOTE/"ssh://"/}
-    remote=${stripped_path%%/*}
-    host=ssh://${remote%:*}
-    dir=${remote#*/}
-    port=${remote#*:} && [[ -n $port ]] || port=22
+    stripped_remote=${REMOTE/"ssh://"/}
+    host=${stripped_remote%%:*}
+    dir=${stripped_remote#*/}
+    port=${stripped_remote#*:} && [[ -n $port ]] || port=22
   else
     host=${REMOTE%:*}
     dir=${REMOTE#*:}
@@ -248,11 +247,10 @@ createdir() {
   # $1 - remote directory
   set +e
   if [[ $WITH_PORT == true ]]; then
-    stripped_path=${REMOTE/"ssh://"/}
-    remote=${stripped_path%%/*}
-    host=ssh://${remote%:*}
-    dir=${remote#*/}
-    port=${remote#*:} && [[ -n $port ]] || port=22
+    stripped_remote=${REMOTE/"ssh://"/}
+    host=${stripped_remote%%:*}
+    dir=${stripped_remote#*/}
+    port=${stripped_remote#*:} && [[ -n $port ]] || port=22
   else
     host=${REMOTE%:*}
     dir=${REMOTE#*:}
