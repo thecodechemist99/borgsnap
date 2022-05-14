@@ -403,7 +403,7 @@ backupSnapshot() {
       borg init --encryption=repokey "$localdir"
     fi
     if [[ -n $remotedir ]]; then
-      if [[ $WITH_PORT == true ]]
+      if [[ $WITH_PORT == true ]]; then
         stripped_remote=${REMOTE/"ssh://"/}
         host=ssh://${REMOTE%%/*}
         dir=${REMOTE#*/}
