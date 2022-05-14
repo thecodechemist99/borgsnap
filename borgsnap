@@ -122,9 +122,9 @@ readconfigfile() {
 
   if [[ -n $RSH ]]; then
     ssh=$RSH
+    BORG_RSH=$RSH
+    export BORG_RSH
   fi
-  BORG_RSH=$RSH
-  export BORG_RSH
 
   [[ -n $BORG_PASSPHRASE ]] || die "Unable to read passphrase from file $PASS"
   if [[ -n $LOCAL ]]; then
