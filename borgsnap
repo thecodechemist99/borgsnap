@@ -110,6 +110,8 @@ date=$(date +"%Y%m%d")
 forcemonth=0
 forceweek=0
 
+ssh=ssh
+
 readconfigfile() {
   [[ -r $1 ]] || die "Unable to open $1"
 
@@ -118,6 +120,9 @@ readconfigfile() {
   BORG_PASSPHRASE=$(< "$PASS")
   export BORG_PASSPHRASE
 
+  if [[ -n $RSH ]]; then
+    ssh=$RSH
+  fi
   BORG_RSH=$RSH
   export BORG_RSH
 
@@ -312,11 +317,11 @@ runBackup() {
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
-      ssh "$host" test -d "$dir/$dataset"
+      $ssh "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $rsyncdir"
-        ssh "$host" mkdir -p "$dir/$dataset"
+        $ssh "$host" mkdir -p "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
       fi
       set -e
@@ -398,11 +403,11 @@ backupSnapshot() {
       host=${REMOTE%:*}
       dir=${REMOTE#*:}
       set +e
-      ssh "$host" test -d "$dir/$dataset"
+      $ssh "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $rsyncdir"
-        ssh "$host" mkdir -p "$dir/$dataset"
+        $ssh "$host" mkdir -p "$dir/$dataset"
         borg init --encryption=repokey --remote-path=${BORGPATH} "$rsyncdir"
       fi
       set -e
