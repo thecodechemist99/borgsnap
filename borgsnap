@@ -164,8 +164,6 @@ readconfigfile() {
     export BORGPATH=$REMOTE_BORG_COMMAND
     echo "REMOTE_BORG_COMMAND set to $BORGPATH"
   fi
-
-
 }
 
 findlast() {
@@ -326,13 +324,13 @@ runBackup() {
       set -e
     fi
 
-    lastmonth=$(findlast "$i" monthly)
-    if [[ -z $lastmonth ]]; then
+    lastmonthly=$(findlast "$i" monthly)
+    if [[ -z $lastmonthly ]]; then
       forcemonth=1
     fi
 
-    lastweek=$(findlast "$i" weekly)
-    if [[ -z $lastweek ]]; then
+    lastweekly=$(findlast "$i" weekly)
+    if [[ -z $lastweekly ]]; then
       forceweek=1
     fi
 
@@ -399,10 +397,16 @@ backupSnapshot() {
       borg init --encryption=repokey "$localdir"
     fi
     if [[ -n $remotedir ]]; then
-      host=${REMOTE%:*}
-      dir=${REMOTE#*:}
+      if [[ $WITH_PORT == true ]]
+        stripped_remote=${REMOTE/"ssh://"/}
+        host=ssh://${REMOTE%%/*}
+        dir=ssh://${REMOTE#*/}
+      else
+        host=${REMOTE%:*}
+        dir=${REMOTE#*:}
+      fi
       set +e
-      ${BORG_RSH} "$host" test -d "$dir/$dataset"
+      sftp ${BORG_RSH#*ssh} "$host" test -d "$dir/$dataset"
       if [[ $? == 1 ]]; then
         set -e
         echo "Initializing remote $remotedir"
@@ -447,8 +451,6 @@ tidybackup() {
     fi
   fi
 
-
-
   if [[ -n $remotedir ]]; then
     echo "Deleting remote backup of ${1}@${2}"
     borg delete $BORG_OPTS --remote-path=${BORGPATH} $BORG_OPTS "$remotedir::${2}"
@@ -463,16 +465,16 @@ tidyUp() {
   do
     umount $f
   done
-  echo "Removing todays snapshots / backups"
+  echo "Removing todays snapshots/backups"
   for i in $FS; do
     dataset=${i}
-    lastmonth=$(findlast "$i" monthly)
-    if [[ -z $lastmonth ]]; then
+    lastmonthly=$(findlast "$i" monthly)
+    if [[ -z $lastmonthly ]]; then
       forcemonth=1
     fi
 
-    lastweek=$(findlast "$i" weekly)
-    if [[ -z $lastweek ]]; then
+    lastweekly=$(findlast "$i" weekly)
+    if [[ -z $lastweekly ]]; then
       forceweek=1
     fi
 
