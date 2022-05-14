@@ -313,8 +313,8 @@ runBackup() {
     if [[ -n $remotedir ]]; then
       if [[ $WITH_PORT == true ]]; then
         stripped_remote=${REMOTE/"ssh://"/}
-        host=ssh://${REMOTE%%/*}
-        dir=${REMOTE#*/}
+        host=ssh://${stripped_remote%%/*}
+        dir=${stripped_remote#*/}
       else
         host=${REMOTE%:*}
         dir=${REMOTE#*:}
@@ -407,8 +407,8 @@ backupSnapshot() {
     if [[ -n $remotedir ]]; then
       if [[ $WITH_PORT == true ]]; then
         stripped_remote=${REMOTE/"ssh://"/}
-        host=ssh://${REMOTE%%/*}
-        dir=${REMOTE#*/}
+        host=ssh://${stripped_remote%%/*}
+        dir=${stripped_remote#*/}
       else
         host=${REMOTE%:*}
         dir=${REMOTE#*:}
